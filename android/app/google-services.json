@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "424450675075",
+    "project_id": "outside-e1f7a",
+    "storage_bucket": "outside-e1f7a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:424450675075:android:6062392d93578fcc2566b6",
+        "android_client_info": {
+          "package_name": "com.outside.outside"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATIbmhnF3ZNCYWELWdW-4CBvGL6P7x4-Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
