@@ -34,3 +34,5 @@ class SignInWithGoogleRequested extends AuthEvent {}
 class SignInWithAppleRequested extends AuthEvent {}
 
 class SignOutRequested extends AuthEvent {}
+
+class DeleteAccountRequested extends AuthEvent {}

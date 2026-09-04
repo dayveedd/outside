@@ -17,6 +17,7 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
         _userRepository = userRepository,
         super(LessonInitial()) {
     on<LoadDailyLesson>(_onLoadDailyLesson);
+    on<SwitchPerspective>(_onSwitchPerspective);
     on<LoadArchive>(_onLoadArchive);
     on<LoadSavedLessons>(_onLoadSavedLessons);
     on<CompleteLesson>(_onCompleteLesson);
@@ -29,13 +30,45 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
   ) async {
     emit(LessonLoading());
     try {
+      final pool = await _lessonRepository.getDailyLessonPool(date: event.date);
       final lesson = event.lessonId != null
           ? await _lessonRepository.getLessonById(event.lessonId!)
-          : await _lessonRepository.getDailyLesson(date: event.date);
-      final activity = await _lessonRepository.getUserActivity(event.userId, lesson.id);
-      emit(DailyLessonLoaded(lesson: lesson, activity: activity));
+          : await _lessonRepository.getDailyLesson(userId: event.userId, date: event.date);
+
+      if (lesson == null) {
+        final targetDateStr = LessonRepository.formatDate(event.date ?? DateTime.now());
+        emit(DailyLessonEmpty(targetDate: targetDateStr));
+        return;
+      }
+
+      for (final p in pool) {
+        await _lessonRepository.getUserActivity(event.userId, p.id);
+      }
+      final activity = _lessonRepository.getCachedUserActivity(lesson.id);
+      emit(DailyLessonLoaded(
+        lesson: lesson,
+        activity: activity,
+        pool: pool,
+        defaultLessonId: lesson.id,
+      ));
     } catch (e) {
       emit(LessonError(e.toString()));
+    }
+  }
+
+  void _onSwitchPerspective(
+    SwitchPerspective event,
+    Emitter<LessonState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is DailyLessonLoaded) {
+      final activity = _lessonRepository.getCachedUserActivity(event.lesson.id);
+      emit(DailyLessonLoaded(
+        lesson: event.lesson,
+        activity: activity,
+        pool: currentState.pool,
+        defaultLessonId: currentState.defaultLessonId ?? currentState.lesson.id,
+      ));
     }
   }
 
@@ -43,13 +76,17 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
     LoadArchive event,
     Emitter<LessonState> emit,
   ) async {
-    emit(LessonLoading());
+    if (!_lessonRepository.hasCachedArchive && state is! ArchiveLoaded) {
+      emit(LessonLoading());
+    }
     try {
       final lessons = await _lessonRepository.getArchive();
       final activities = await _lessonRepository.getUserActivities(event.userId);
       emit(ArchiveLoaded(lessons: lessons, activities: activities));
     } catch (e) {
-      emit(LessonError(e.toString()));
+      if (state is! ArchiveLoaded) {
+        emit(LessonError(e.toString()));
+      }
     }
   }
 
@@ -57,12 +94,16 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
     LoadSavedLessons event,
     Emitter<LessonState> emit,
   ) async {
-    emit(LessonLoading());
+    if (!_lessonRepository.hasCachedSaved && state is! SavedLessonsLoaded) {
+      emit(LessonLoading());
+    }
     try {
       final lessons = await _lessonRepository.getSavedLessons(event.userId);
       emit(SavedLessonsLoaded(lessons));
     } catch (e) {
-      emit(LessonError(e.toString()));
+      if (state is! SavedLessonsLoaded) {
+        emit(LessonError(e.toString()));
+      }
     }
   }
 
@@ -71,7 +112,6 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
     Emitter<LessonState> emit,
   ) async {
     try {
-      // 1. Get or create current activity
       final existingActivity = await _lessonRepository.getUserActivity(event.userId, event.lessonId);
       final updatedActivity = (existingActivity ?? UserActivity(userId: event.userId, lessonId: event.lessonId)).copyWith(
         isRead: true,
@@ -79,16 +119,17 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
         completedAt: DateTime.now(),
       );
 
-      // 2. Save user activity to Firestore
       await _lessonRepository.saveUserActivity(updatedActivity);
-
-      // 3. Update the streak in Firestore
       await _userRepository.updateStreakAfterCompletion(event.userId);
 
-      // 4. Update local BLoC state based on the current state type
       final currentState = state;
       if (currentState is DailyLessonLoaded && currentState.lesson.id == event.lessonId) {
-        emit(DailyLessonLoaded(lesson: currentState.lesson, activity: updatedActivity));
+        emit(DailyLessonLoaded(
+          lesson: currentState.lesson,
+          activity: updatedActivity,
+          pool: currentState.pool,
+          defaultLessonId: currentState.defaultLessonId,
+        ));
       } else if (currentState is ArchiveLoaded) {
         final updatedActivities = Map<String, UserActivity>.from(currentState.activities);
         updatedActivities[event.lessonId] = updatedActivity;
@@ -104,26 +145,27 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
     Emitter<LessonState> emit,
   ) async {
     try {
-      // 1. Get or create current activity
       final existingActivity = await _lessonRepository.getUserActivity(event.userId, event.lessonId);
       final newSaveState = existingActivity != null ? !existingActivity.isSaved : true;
       final updatedActivity = (existingActivity ?? UserActivity(userId: event.userId, lessonId: event.lessonId)).copyWith(
         isSaved: newSaveState,
       );
 
-      // 2. Save to Firestore
       await _lessonRepository.saveUserActivity(updatedActivity);
 
-      // 3. Update local state
       final currentState = state;
       if (currentState is DailyLessonLoaded && currentState.lesson.id == event.lessonId) {
-        emit(DailyLessonLoaded(lesson: currentState.lesson, activity: updatedActivity));
+        emit(DailyLessonLoaded(
+          lesson: currentState.lesson,
+          activity: updatedActivity,
+          pool: currentState.pool,
+          defaultLessonId: currentState.defaultLessonId,
+        ));
       } else if (currentState is ArchiveLoaded) {
         final updatedActivities = Map<String, UserActivity>.from(currentState.activities);
         updatedActivities[event.lessonId] = updatedActivity;
         emit(ArchiveLoaded(lessons: currentState.lessons, activities: updatedActivities));
       } else if (currentState is SavedLessonsLoaded) {
-        // Refresh saved lessons list
         final lessons = await _lessonRepository.getSavedLessons(event.userId);
         emit(SavedLessonsLoaded(lessons));
       }

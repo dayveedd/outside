@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../logic/auth/auth_bloc.dart';
 import '../../../logic/auth/auth_event.dart';
 import '../../../logic/auth/auth_state.dart';
+import '../../../core/services/onesignal_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,7 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: const Color(0xFFFCFCFD),
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthError) {
+          if (state is Authenticated) {
+            OneSignalService().promptNotificationPermission();
+          } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),

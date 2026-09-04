@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../data/models/lesson.dart';
 
 abstract class LessonEvent extends Equatable {
   const LessonEvent();
@@ -62,4 +63,13 @@ class ToggleSaveLesson extends LessonEvent {
 
   @override
   List<Object?> get props => [userId, lessonId];
+}
+
+class SwitchPerspective extends LessonEvent {
+  final Lesson lesson;
+
+  const SwitchPerspective(this.lesson);
+
+  @override
+  List<Object?> get props => [lesson];
 }

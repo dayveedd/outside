@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../core/services/onesignal_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -17,6 +18,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<SignInWithGoogleRequested>(_onSignInWithGoogleRequested);
     on<SignInWithAppleRequested>(_onSignInWithAppleRequested);
     on<SignOutRequested>(_onSignOutRequested);
+    on<DeleteAccountRequested>(_onDeleteAccountRequested);
 
     _authSubscription = _authRepository.authStateChanges.listen((user) {
       add(AuthCheckRequested());
@@ -29,6 +31,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final user = _authRepository.currentUser;
     if (user != null) {
+      OneSignalService().login(user.uid);
       emit(Authenticated(user));
     } else {
       emit(Unauthenticated());
@@ -43,6 +46,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final credential = await _authRepository.signInWithEmail(event.email, event.password);
       if (credential.user != null) {
+        OneSignalService().login(credential.user!.uid);
         emit(Authenticated(credential.user!));
       } else {
         emit(Unauthenticated());
@@ -60,6 +64,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final credential = await _authRepository.signUpWithEmail(event.email, event.password);
       if (credential.user != null) {
+        OneSignalService().login(credential.user!.uid);
         emit(Authenticated(credential.user!));
       } else {
         emit(Unauthenticated());
@@ -77,6 +82,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final credential = await _authRepository.signInWithGoogle();
       if (credential.user != null) {
+        OneSignalService().login(credential.user!.uid);
         emit(Authenticated(credential.user!));
       } else {
         emit(Unauthenticated());
@@ -94,6 +100,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final credential = await _authRepository.signInWithApple();
       if (credential.user != null) {
+        OneSignalService().login(credential.user!.uid);
         emit(Authenticated(credential.user!));
       } else {
         emit(Unauthenticated());
@@ -110,6 +117,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       await _authRepository.signOut();
+      OneSignalService().logout();
+      emit(Unauthenticated());
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteAccountRequested(
+    DeleteAccountRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      await _authRepository.deleteAccount();
+      OneSignalService().logout();
       emit(Unauthenticated());
     } catch (e) {
       emit(AuthError(e.toString()));

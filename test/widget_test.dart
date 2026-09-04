@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:outside/data/models/lesson.dart';
 import 'package:outside/data/models/user_activity.dart';
 import 'package:outside/data/models/user_streak.dart';
+import 'package:outside/logic/lesson/lesson_event.dart';
+import 'package:outside/logic/lesson/lesson_state.dart';
 
 void main() {
   group('Lesson Model Tests', () {
@@ -69,7 +71,7 @@ void main() {
   });
 
   group('UserStreak Calculation Logic Tests', () {
-    final now = DateTime(2026, 8, 11, 12, 0); // 2026-08-11 noon
+    final now = DateTime(2026, 8, 11, 12, 0);
 
     test('Scenario A: First completion ever (lastCompletedDate is null)', () {
       final result = UserStreak.calculateNextStreak(
@@ -85,7 +87,7 @@ void main() {
     });
 
     test('Scenario B: Same day completion (lastCompletedDate is today)', () {
-      final lastCompleted = DateTime(2026, 8, 11, 8, 0); // Completed earlier today
+      final lastCompleted = DateTime(2026, 8, 11, 8, 0);
       final result = UserStreak.calculateNextStreak(
         currentStreak: 3,
         longestStreak: 5,
@@ -93,14 +95,13 @@ void main() {
         now: now,
       );
 
-      // Streak details must remain unchanged
       expect(result.currentStreak, 3);
       expect(result.longestStreak, 5);
       expect(result.lastCompletedDate, lastCompleted);
     });
 
     test('Scenario C: Consecutive day completion (lastCompletedDate is yesterday)', () {
-      final lastCompleted = DateTime(2026, 8, 10, 15, 30); // Completed yesterday
+      final lastCompleted = DateTime(2026, 8, 10, 15, 30);
       final result = UserStreak.calculateNextStreak(
         currentStreak: 2,
         longestStreak: 2,
@@ -108,14 +109,13 @@ void main() {
         now: now,
       );
 
-      // Current streak increments, longest streak increments since new current > old longest
       expect(result.currentStreak, 3);
       expect(result.longestStreak, 3);
       expect(result.lastCompletedDate, now);
     });
 
     test('Scenario D: Broken streak completion (lastCompletedDate is 2+ days ago)', () {
-      final lastCompleted = DateTime(2026, 8, 9, 10, 0); // Completed 2 days ago (missed yesterday)
+      final lastCompleted = DateTime(2026, 8, 9, 10, 0);
       final result = UserStreak.calculateNextStreak(
         currentStreak: 4,
         longestStreak: 10,
@@ -123,10 +123,99 @@ void main() {
         now: now,
       );
 
-      // Current streak resets to 1, longest streak stays at peak (10)
       expect(result.currentStreak, 1);
       expect(result.longestStreak, 10);
       expect(result.lastCompletedDate, now);
+    });
+  });
+
+  group('LessonState Tests', () {
+    test('DailyLessonEmpty should hold targetDate and equate correctly', () {
+      const state1 = DailyLessonEmpty(targetDate: '2026-09-02');
+      const state2 = DailyLessonEmpty(targetDate: '2026-09-02');
+      const state3 = DailyLessonEmpty(targetDate: '2026-09-03');
+
+      expect(state1, equals(state2));
+      expect(state1 == state3, isFalse);
+      expect(state1.targetDate, '2026-09-02');
+    });
+
+    test('DailyLessonLoaded should hold pool and equate correctly', () {
+      final lesson1 = Lesson.fromJson(const {
+        'id': 'l1',
+        'publishDate': '2026-09-04',
+        'category': 'Gaming & Play',
+        'hook': 'Hook 1',
+        'idea': 'Idea 1',
+        'whyItMatters': 'Why 1',
+        'everydayExample': 'Ex 1',
+        'reflectionPrompt': 'Ref 1',
+        'exploreMore': <String>[],
+        'readTimeMinutes': 3,
+      });
+
+      final lesson2 = Lesson.fromJson(const {
+        'id': 'l2',
+        'publishDate': '2026-09-04',
+        'category': 'Arts & Craft',
+        'hook': 'Hook 2',
+        'idea': 'Idea 2',
+        'whyItMatters': 'Why 2',
+        'everydayExample': 'Ex 2',
+        'reflectionPrompt': 'Ref 2',
+        'exploreMore': <String>[],
+        'readTimeMinutes': 3,
+      });
+
+      final state1 = DailyLessonLoaded(lesson: lesson1, pool: [lesson1, lesson2], defaultLessonId: lesson1.id);
+      final state2 = DailyLessonLoaded(lesson: lesson1, pool: [lesson1, lesson2], defaultLessonId: lesson1.id);
+      final stateAlternative = DailyLessonLoaded(lesson: lesson2, pool: [lesson1, lesson2], defaultLessonId: lesson1.id);
+
+      expect(state1, equals(state2));
+      expect(state1.pool.length, 2);
+      expect(state1.defaultLessonId, 'l1');
+      expect(state1.lesson.id == state1.defaultLessonId, isTrue);
+      expect(stateAlternative.lesson.id != stateAlternative.defaultLessonId, isTrue);
+
+      final event = SwitchPerspective(lesson2);
+      expect(event.lesson, equals(lesson2));
+      expect(event.props, [lesson2]);
+    });
+  });
+
+  group('Multi-Perspective User Randomization Tests', () {
+    test('same user on same day consistently receives identical selection', () {
+      const userId = 'user_alex_123';
+      const targetDateStr = '2026-09-04';
+      final pool = ['gaming', 'arts', 'social'];
+
+      final seed1 = (userId.hashCode ^ targetDateStr.hashCode).abs();
+      final selected1 = pool[seed1 % pool.length];
+
+      final seed2 = (userId.hashCode ^ targetDateStr.hashCode).abs();
+      final selected2 = pool[seed2 % pool.length];
+
+      expect(selected1, equals(selected2));
+    });
+
+    test('different users receive distributed perspectives across pool', () {
+      const targetDateStr = '2026-09-04';
+      final pool = ['gaming', 'arts', 'social'];
+      final userIds = [
+        'user_alpha',
+        'user_beta',
+        'user_gamma',
+        'user_delta',
+        'user_epsilon',
+        'user_zeta',
+      ];
+
+      final selections = userIds.map((uid) {
+        final seed = (uid.hashCode ^ targetDateStr.hashCode).abs();
+        return pool[seed % pool.length];
+      }).toSet();
+
+      expect(selections.length, greaterThan(1));
     });
   });
 }

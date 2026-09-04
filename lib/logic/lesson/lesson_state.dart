@@ -16,11 +16,27 @@ class LessonLoading extends LessonState {}
 class DailyLessonLoaded extends LessonState {
   final Lesson lesson;
   final UserActivity? activity;
+  final List<Lesson> pool;
+  final String? defaultLessonId;
 
-  const DailyLessonLoaded({required this.lesson, this.activity});
+  const DailyLessonLoaded({
+    required this.lesson,
+    this.activity,
+    this.pool = const [],
+    this.defaultLessonId,
+  });
 
   @override
-  List<Object?> get props => [lesson, activity];
+  List<Object?> get props => [lesson, activity, pool, defaultLessonId];
+}
+
+class DailyLessonEmpty extends LessonState {
+  final String targetDate;
+
+  const DailyLessonEmpty({required this.targetDate});
+
+  @override
+  List<Object?> get props => [targetDate];
 }
 
 class ArchiveLoaded extends LessonState {

@@ -1,0 +1,16 @@
+{
+  "Simulator Target Bundle": "com.outside.outside",
+  "aps": {
+    "alert": {
+      "title": "Today's Outside Perspective",
+      "body": "The Map is Not the Territory: Step outside your cognitive bubble today."
+    },
+    "sound": "default",
+    "badge": 1
+  },
+  "custom": {
+    "a": {
+      "lessonId": "2026-09-02"
+    }
+  }
+}

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_options.dart';
 import 'core/constants/constants.dart';
 import 'core/services/onesignal_service.dart';
@@ -12,16 +14,15 @@ import 'data/repositories/auth_repository.dart';
 import 'logic/auth/auth_bloc.dart';
 import 'logic/auth/auth_event.dart';
 import 'logic/auth/auth_state.dart';
-import 'logic/lesson/lesson_bloc.dart';
 import 'logic/streak/streak_bloc.dart';
 import 'logic/subscription/subscription_bloc.dart';
-import 'presentation/screens/daily_lesson/daily_lesson_screen.dart';
 import 'presentation/screens/archive/archive_screen.dart';
 import 'presentation/screens/saved/saved_screen.dart';
 import 'presentation/screens/paywall/paywall_screen.dart';
 import 'presentation/screens/auth/login_screen.dart';
+import 'presentation/screens/home/main_navigation_screen.dart';
 
-import 'package:google_sign_in/google_sign_in.dart';
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,12 +77,6 @@ class MyApp extends StatelessWidget {
               authRepository: authRepository,
             )..add(AuthCheckRequested()),
           ),
-          BlocProvider<LessonBloc>(
-            create: (context) => LessonBloc(
-              lessonRepository: lessonRepository,
-              userRepository: userRepository,
-            ),
-          ),
           BlocProvider<StreakBloc>(
             create: (context) => StreakBloc(
               userRepository: userRepository,
@@ -94,6 +89,7 @@ class MyApp extends StatelessWidget {
           ),
         ],
         child: MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'Outside',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
@@ -110,15 +106,99 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  StreamSubscription? _subscriptionIdSub;
+  StreamSubscription? _deepLinkSub;
+  bool _verificationDialogShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscriptionIdSub = OneSignalService().subscriptionIdStream.listen((id) {
+      if (!mounted) return;
+      if (!_verificationDialogShown) {
+        _verificationDialogShown = true;
+        _showVerificationDialog();
+      }
+    });
+
+    _deepLinkSub = OneSignalService().deepLinkStream.listen((lessonId) {
+      if (!mounted) return;
+      final authState = context.read<AuthBloc>().state;
+      if (authState is Authenticated) {
+        navigatorKey.currentState?.popUntil((route) => route.isFirst);
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (!mounted || _verificationDialogShown) return;
+        final authState = context.read<AuthBloc>().state;
+        if (authState is Authenticated && !OneSignalService().hasPermission) {
+          _verificationDialogShown = true;
+          _showVerificationDialog();
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscriptionIdSub?.cancel();
+    _deepLinkSub?.cancel();
+    super.dispose();
+  }
+
+  void _showVerificationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Daily Drop Notifications',
+            style: AppTypography.h3.copyWith(color: AppColors.secondary),
+          ),
+          content: Text(
+            'Outside delivers exactly one curated perspective each day at 00:00 UTC. Tap below to enable push notifications so you never miss a daily drop.',
+            style: AppTypography.body.copyWith(color: AppColors.textPrimary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Later',
+                style: AppTypography.uiMedium.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await OneSignalService().promptNotificationPermission();
+              },
+              child: const Text('Enable Notifications'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is Authenticated) {
-          return const DailyLessonScreen();
+          return const MainNavigationScreen();
         } else if (state is Unauthenticated || state is AuthError) {
           return const LoginScreen();
         }
