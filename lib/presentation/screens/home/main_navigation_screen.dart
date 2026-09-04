@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/lesson_repository.dart';
@@ -26,17 +27,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final isSelected = _currentIndex == index;
     return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
         setState(() {
           _currentIndex = index;
         });
       },
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          border: isSelected
+              ? Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.20),
+                  width: 1,
+                )
+              : Border.all(color: Colors.transparent, width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -70,35 +79,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 100),
-              child: IndexedStack(
-                index: _currentIndex,
-                children: [
-                  BlocProvider<LessonBloc>(
-                    create: (context) => LessonBloc(
-                      lessonRepository: context.read<LessonRepository>(),
-                      userRepository: context.read<UserRepository>(),
-                    ),
-                    child: const DailyLessonScreen(),
+            child: IndexedStack(
+              index: _currentIndex,
+              children: [
+                BlocProvider<LessonBloc>(
+                  create: (context) => LessonBloc(
+                    lessonRepository: context.read<LessonRepository>(),
+                    userRepository: context.read<UserRepository>(),
                   ),
-                  BlocProvider<LessonBloc>(
-                    create: (context) => LessonBloc(
-                      lessonRepository: context.read<LessonRepository>(),
-                      userRepository: context.read<UserRepository>(),
-                    ),
-                    child: ArchiveScreen(key: _archiveKey),
+                  child: const DailyLessonScreen(),
+                ),
+                BlocProvider<LessonBloc>(
+                  create: (context) => LessonBloc(
+                    lessonRepository: context.read<LessonRepository>(),
+                    userRepository: context.read<UserRepository>(),
                   ),
-                  BlocProvider<LessonBloc>(
-                    create: (context) => LessonBloc(
-                      lessonRepository: context.read<LessonRepository>(),
-                      userRepository: context.read<UserRepository>(),
-                    ),
-                    child: SavedScreen(key: _savedKey),
+                  child: ArchiveScreen(key: _archiveKey),
+                ),
+                BlocProvider<LessonBloc>(
+                  create: (context) => LessonBloc(
+                    lessonRepository: context.read<LessonRepository>(),
+                    userRepository: context.read<UserRepository>(),
                   ),
-                  const SettingsScreen(),
-                ],
-              ),
+                  child: SavedScreen(key: _savedKey),
+                ),
+                const SettingsScreen(),
+              ],
             ),
           ),
           Positioned(
@@ -108,21 +114,34 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(32),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
                 child: Container(
-                  height: 70,
+                  height: 72,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.85),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.65),
+                        Colors.white.withValues(alpha: 0.35),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: Colors.white.withValues(alpha: 0.70),
                       width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                        spreadRadius: -2,
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.35),
+                        blurRadius: 4,
+                        offset: const Offset(0, -1),
                       ),
                     ],
                   ),

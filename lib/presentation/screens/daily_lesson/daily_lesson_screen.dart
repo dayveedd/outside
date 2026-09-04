@@ -100,7 +100,7 @@ class _DailyLessonScreenState extends State<DailyLessonScreen> {
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -459,7 +459,7 @@ class _DailyLessonScreenState extends State<DailyLessonScreen> {
                     },
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                       child: Column(
                         children: [
                           if (lessonState.pool.length > 1) ...[
