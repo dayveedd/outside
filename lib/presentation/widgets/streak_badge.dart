@@ -20,7 +20,7 @@ class StreakBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: hasStreak ? AppColors.accent.withOpacity(0.1) : AppColors.border.withOpacity(0.5),
+          color: hasStreak ? AppColors.accent.withValues(alpha: 0.1) : AppColors.border.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: hasStreak ? AppColors.accent : AppColors.border,
@@ -50,7 +50,7 @@ class StreakBadge extends StatelessWidget {
               Text(
                 'days',
                 style: AppTypography.caption.copyWith(
-                  color: hasStreak ? AppColors.accent.withOpacity(0.8) : AppColors.textMuted,
+                  color: hasStreak ? AppColors.accent.withValues(alpha: 0.8) : AppColors.textMuted,
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
                 ),

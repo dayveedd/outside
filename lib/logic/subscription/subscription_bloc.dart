@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/services/revenuecat_service.dart';
 import 'subscription_event.dart';
@@ -23,8 +24,10 @@ class SubscriptionBloc extends Bloc<SubscriptionEvent, SubscriptionState> {
     try {
       final isPremium = await _revenueCatService.checkEntitlementActive();
       final packages = await _revenueCatService.getAvailablePackages();
+      debugPrint('[SubscriptionBloc] Status checked: isPremium=$isPremium, packagesCount=${packages.length}');
       emit(SubscriptionStatus(isPremium: isPremium, packages: packages));
     } catch (e) {
+      debugPrint('[SubscriptionBloc] Error checking subscription status: $e');
       emit(SubscriptionError('Failed to load subscription status: ${e.toString()}'));
     }
   }
@@ -39,8 +42,8 @@ class SubscriptionBloc extends Bloc<SubscriptionEvent, SubscriptionState> {
       final packages = await _revenueCatService.getAvailablePackages();
       emit(SubscriptionStatus(isPremium: isPremium, packages: packages));
     } catch (e) {
+      debugPrint('[SubscriptionBloc] Error purchasing package: $e');
       emit(SubscriptionError('Failed to purchase subscription: ${e.toString()}'));
-      // Emit status again to return to paywall screen controls
       add(CheckSubscriptionStatus());
     }
   }
@@ -55,6 +58,7 @@ class SubscriptionBloc extends Bloc<SubscriptionEvent, SubscriptionState> {
       final packages = await _revenueCatService.getAvailablePackages();
       emit(SubscriptionStatus(isPremium: isPremium, packages: packages));
     } catch (e) {
+      debugPrint('[SubscriptionBloc] Error restoring purchases: $e');
       emit(SubscriptionError('Failed to restore purchases: ${e.toString()}'));
       add(CheckSubscriptionStatus());
     }

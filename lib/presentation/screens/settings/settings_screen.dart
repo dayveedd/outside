@@ -137,7 +137,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            isPremium ? 'Outside Premium' : 'Free Plan',
+                            isPremium ? 'Outside Pro' : 'Free Plan',
                             style: AppTypography.h3.copyWith(
                               color: isPremium ? AppColors.primary : AppColors.secondary,
                             ),
@@ -150,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                'Lifetime',
+                                'Pro',
                                 style: AppTypography.caption.copyWith(
                                   color: AppColors.primary,
                                   fontWeight: FontWeight.bold,

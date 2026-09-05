@@ -4,6 +4,8 @@ import 'package:outside/data/models/user_activity.dart';
 import 'package:outside/data/models/user_streak.dart';
 import 'package:outside/logic/lesson/lesson_event.dart';
 import 'package:outside/logic/lesson/lesson_state.dart';
+import 'package:outside/logic/subscription/subscription_state.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 
 void main() {
   group('Lesson Model Tests', () {
@@ -216,6 +218,30 @@ void main() {
       }).toSet();
 
       expect(selections.length, greaterThan(1));
+    });
+  });
+
+  group('RevenueCat Subscription Tier Tests', () {
+    test('SubscriptionStatus correctly stores and compares packages', () {
+      final samplePackage = Package(
+        'yearly_annual',
+        PackageType.annual,
+        StoreProduct(
+          'outside_yearly_annual_999',
+          'Outside Pro (Pay Annually)',
+          'Full access billed annually at \$9.99/year (\$0.83/mo). Save 58%.',
+          9.99,
+          '\$9.99',
+          'USD',
+        ),
+        const PresentedOfferingContext('default_offering', null, null),
+      );
+
+      final status = SubscriptionStatus(isPremium: true, packages: [samplePackage]);
+      expect(status.isPremium, isTrue);
+      expect(status.packages.length, 1);
+      expect(status.packages.first.storeProduct.price, 9.99);
+      expect(status.packages.first.storeProduct.priceString, '\$9.99');
     });
   });
 }
