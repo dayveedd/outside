@@ -20,6 +20,7 @@ import 'presentation/screens/archive/archive_screen.dart';
 import 'presentation/screens/saved/saved_screen.dart';
 import 'presentation/screens/paywall/paywall_screen.dart';
 import 'presentation/screens/auth/login_screen.dart';
+import 'presentation/screens/auth/unauthenticated_flow_screen.dart';
 import 'presentation/screens/home/main_navigation_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -200,7 +201,7 @@ class _AuthGateState extends State<AuthGate> {
         if (state is Authenticated) {
           return const MainNavigationScreen();
         } else if (state is Unauthenticated || state is AuthError) {
-          return const LoginScreen();
+          return const UnauthenticatedFlowScreen();
         }
         return const Scaffold(
           backgroundColor: Color(0xFFFCFCFD),

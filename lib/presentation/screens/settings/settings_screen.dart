@@ -8,6 +8,7 @@ import '../../../logic/auth/auth_event.dart';
 import '../../../logic/subscription/subscription_bloc.dart';
 import '../../../logic/subscription/subscription_event.dart';
 import '../../../logic/subscription/subscription_state.dart';
+import '../../widgets/account_action_dialog.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -39,50 +40,20 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   }
 
   void _onLogoutPressed() {
-    showDialog(
+    AccountActionDialog.showLogout(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to log out of Outside?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AuthBloc>().add(SignOutRequested());
-            },
-            child: const Text('Log Out', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      onConfirm: () {
+        context.read<AuthBloc>().add(SignOutRequested());
+      },
     );
   }
 
   void _onDeleteAccountPressed() {
-    showDialog(
+    AccountActionDialog.showDeleteAccount(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'This action is permanent and cannot be undone. All your progress, streak history, and subscription access will be permanently deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AuthBloc>().add(DeleteAccountRequested());
-            },
-            child: const Text('Delete Permanently', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      onConfirm: () {
+        context.read<AuthBloc>().add(DeleteAccountRequested());
+      },
     );
   }
 

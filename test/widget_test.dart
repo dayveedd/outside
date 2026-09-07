@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outside/data/models/lesson.dart';
 import 'package:outside/data/models/user_activity.dart';
@@ -5,6 +6,8 @@ import 'package:outside/data/models/user_streak.dart';
 import 'package:outside/logic/lesson/lesson_event.dart';
 import 'package:outside/logic/lesson/lesson_state.dart';
 import 'package:outside/logic/subscription/subscription_state.dart';
+import 'package:outside/presentation/screens/onboarding/onboarding_screen.dart';
+import 'package:outside/presentation/widgets/account_action_dialog.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 void main() {
@@ -244,4 +247,140 @@ void main() {
       expect(status.packages.first.storeProduct.priceString, '\$9.99');
     });
   });
+
+  group('Onboarding Screen Tests', () {
+    testWidgets('renders first slide and navigates forward on Continue', (tester) async {
+      bool started = false;
+      bool signedIn = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OnboardingScreen(
+            onGetStarted: () => started = true,
+            onSignIn: () => signedIn = true,
+          ),
+        ),
+      );
+
+      expect(find.text('OUTSIDE.'), findsOneWidget);
+      expect(find.text('Step Outside Your Echo Chamber'), findsOneWidget);
+      expect(find.text('Continue'), findsOneWidget);
+      final firstImg = tester.widget<Image>(find.byType(Image).first);
+      expect((firstImg.image as AssetImage).assetName, 'images/outside3.jpg');
+
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('See Every Idea From Every Angle'), findsOneWidget);
+      final secondImg = tester.widget<Image>(find.byType(Image).first);
+      expect((secondImg.image as AssetImage).assetName, 'images/outside2.jpg');
+
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reflect, Journal & Grow'), findsOneWidget);
+      expect(find.text('Get Started'), findsOneWidget);
+      final thirdImg = tester.widget<Image>(find.byType(Image).first);
+      expect((thirdImg.image as AssetImage).assetName, 'images/outside6.jpg');
+
+      await tester.tap(find.text('Get Started'));
+      expect(started, isTrue);
+
+      await tester.tap(find.byType(TextButton).last);
+      expect(signedIn, isTrue);
+    });
+
+    testWidgets('Skip button navigates directly to get started callback', (tester) async {
+      bool started = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OnboardingScreen(
+            onGetStarted: () => started = true,
+            onSignIn: () {},
+          ),
+        ),
+      );
+
+      expect(find.text('Skip'), findsOneWidget);
+      await tester.tap(find.text('Skip'));
+      expect(started, isTrue);
+    });
+  });
+
+  group('Account Action Dialog Tests', () {
+    testWidgets('renders Logout dialog and triggers callback', (tester) async {
+      bool confirmed = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () {
+                  AccountActionDialog.showLogout(
+                    context: context,
+                    onConfirm: () => confirmed = true,
+                  );
+                },
+                child: const Text('Open Logout'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Logout'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign Out of Outside?'), findsOneWidget);
+      expect(find.text('Stay Signed In'), findsOneWidget);
+      expect(find.text('Sign Out'), findsOneWidget);
+
+      await tester.tap(find.text('Sign Out'));
+      await tester.pumpAndSettle();
+
+      expect(confirmed, isTrue);
+      expect(find.text('Sign Out of Outside?'), findsNothing);
+    });
+
+    testWidgets('renders Delete Account dialog and triggers callback', (tester) async {
+      bool confirmed = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () {
+                  AccountActionDialog.showDeleteAccount(
+                    context: context,
+                    onConfirm: () => confirmed = true,
+                  );
+                },
+                child: const Text('Open Delete'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete Your Account?'), findsOneWidget);
+      expect(find.text('Keep My Account'), findsOneWidget);
+      expect(find.text('Delete Permanently'), findsOneWidget);
+      expect(find.text('Streak History'), findsOneWidget);
+      expect(find.text('Saved Journals'), findsOneWidget);
+      expect(find.text('Pro Membership'), findsOneWidget);
+
+      await tester.tap(find.text('Delete Permanently'));
+      await tester.pumpAndSettle();
+
+      expect(confirmed, isTrue);
+      expect(find.text('Delete Your Account?'), findsNothing);
+    });
+  });
 }
+
