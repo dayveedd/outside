@@ -78,14 +78,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'OUTSIDE.',
-                    style: AppTypography.uiSemiBold.copyWith(
-                      color: AppColors.primary,
-                      fontSize: 18,
-                      letterSpacing: 2.5,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'images/OUTSIDE.png',
+                          width: 24,
+                          height: 24,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'OUTSIDE.',
+                        style: AppTypography.uiSemiBold.copyWith(
+                          color: AppColors.primary,
+                          fontSize: 18,
+                          letterSpacing: 2.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   TextButton(
                     onPressed: widget.onGetStarted,

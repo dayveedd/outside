@@ -308,7 +308,12 @@ class _StreakStatsModalState extends State<StreakStatsModal> {
                       children: List.generate(7, (i) {
                         final dayIndex = i + 1;
                         final isToday = dayIndex == todayWeekday;
-                        final isCompleted = current > 0 && dayIndex <= todayWeekday && (todayWeekday - dayIndex) < current;
+                        final offsetFromToday = todayWeekday - dayIndex;
+                        final hasCompletedToday = widget.streak.lastCompletedDate != null &&
+                            UserStreak.daysBetween(widget.streak.lastCompletedDate!, DateTime.now()) == 0;
+                        final isCompleted = hasCompletedToday
+                            ? (offsetFromToday >= 0 && offsetFromToday < current)
+                            : (offsetFromToday > 0 && offsetFromToday <= current);
 
                         return Column(
                           children: [

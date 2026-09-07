@@ -15,21 +15,25 @@ class UserRepository {
     await _auth.signOut();
   }
 
-  // Get user streak details
   Future<UserStreak> getUserStreak(String userId) async {
     try {
       final doc = await _firestore.collection(AppConstants.usersCollection).doc(userId).get();
       if (doc.exists) {
-        return UserStreak.fromFirestore(doc);
+        final streak = UserStreak.fromFirestore(doc);
+        if (streak.lastCompletedDate != null) {
+          final diff = UserStreak.daysBetween(streak.lastCompletedDate!, DateTime.now());
+          if (diff > 1 && streak.currentStreak != 0) {
+            return streak.copyWith(currentStreak: 0);
+          }
+        }
+        return streak;
       }
       return UserStreak();
-    } catch (e) {
-      print('Error getting user streak from Firestore: $e');
+    } catch (_) {
       return UserStreak();
     }
   }
 
-  // Increment or update streak upon lesson completion
   Future<UserStreak> updateStreakAfterCompletion(String userId) async {
     try {
       final docRef = _firestore.collection(AppConstants.usersCollection).doc(userId);
@@ -60,8 +64,7 @@ class UserRepository {
 
         return nextStreak;
       });
-    } catch (e) {
-      print('Firestore Streak Update Failed: $e');
+    } catch (_) {
       return UserStreak();
     }
   }

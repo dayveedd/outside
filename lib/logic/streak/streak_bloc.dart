@@ -11,18 +11,28 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
       : _userRepository = userRepository,
         super(StreakInitial()) {
     on<LoadStreak>(_onLoadStreak);
+    on<StreakUpdated>(_onStreakUpdated);
   }
 
   Future<void> _onLoadStreak(
     LoadStreak event,
     Emitter<StreakState> emit,
   ) async {
-    emit(StreakLoading());
+    if (state is! StreakLoaded) {
+      emit(StreakLoading());
+    }
     try {
       final streak = await _userRepository.getUserStreak(event.userId);
       emit(StreakLoaded(streak));
     } catch (e) {
       emit(StreakError('Failed to load streak: ${e.toString()}'));
     }
+  }
+
+  void _onStreakUpdated(
+    StreakUpdated event,
+    Emitter<StreakState> emit,
+  ) {
+    emit(StreakLoaded(event.streak));
   }
 }

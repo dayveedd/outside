@@ -22,6 +22,7 @@ import 'presentation/screens/paywall/paywall_screen.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/unauthenticated_flow_screen.dart';
 import 'presentation/screens/home/main_navigation_screen.dart';
+import 'presentation/screens/splash/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -194,21 +195,29 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
+  bool _isSplashFinished = false;
+
+  void _onSplashFinish() {
+    if (mounted) {
+      setState(() {
+        _isSplashFinished = true;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
+        if (!_isSplashFinished) {
+          return SplashScreen(onFinish: _onSplashFinish);
+        }
         if (state is Authenticated) {
           return const MainNavigationScreen();
         } else if (state is Unauthenticated || state is AuthError) {
           return const UnauthenticatedFlowScreen();
         }
-        return const Scaffold(
-          backgroundColor: Color(0xFFFCFCFD),
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
+        return const SplashScreen();
       },
     );
   }

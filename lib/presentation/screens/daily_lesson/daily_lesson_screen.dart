@@ -330,14 +330,27 @@ class _DailyLessonScreenState extends State<DailyLessonScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, authState) {
-        if (authState is Authenticated) {
-          _triggerOnboardingLoad(authState.user.uid);
-        } else if (authState is Unauthenticated) {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<AuthBloc, AuthState>(
+          listener: (context, authState) {
+            if (authState is Authenticated) {
+              _triggerOnboardingLoad(authState.user.uid);
+            } else if (authState is Unauthenticated) {
+              Navigator.pushReplacementNamed(context, '/login');
+            }
+          },
+        ),
+        BlocListener<LessonBloc, LessonState>(
+          listener: (context, lessonState) {
+            if (lessonState is DailyLessonLoaded && lessonState.activity?.isRead == true) {
+              if (_currentUserId != null) {
+                context.read<StreakBloc>().add(LoadStreak(_currentUserId!));
+              }
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         appBar: AppBar(
           title: Text(

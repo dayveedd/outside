@@ -7,6 +7,7 @@ import 'package:outside/logic/lesson/lesson_event.dart';
 import 'package:outside/logic/lesson/lesson_state.dart';
 import 'package:outside/logic/subscription/subscription_state.dart';
 import 'package:outside/presentation/screens/onboarding/onboarding_screen.dart';
+import 'package:outside/presentation/screens/splash/splash_screen.dart';
 import 'package:outside/presentation/widgets/account_action_dialog.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
@@ -131,6 +132,13 @@ void main() {
       expect(result.currentStreak, 1);
       expect(result.longestStreak, 10);
       expect(result.lastCompletedDate, now);
+    });
+
+    test('daysBetween correctly calculates days difference', () {
+      expect(UserStreak.daysBetween(DateTime(2026, 8, 10), DateTime(2026, 8, 11)), 1);
+      expect(UserStreak.daysBetween(DateTime(2026, 8, 11), DateTime(2026, 8, 11)), 0);
+      expect(UserStreak.daysBetween(DateTime(2026, 8, 9), DateTime(2026, 8, 11)), 2);
+      expect(UserStreak.daysBetween(DateTime(2026, 8, 31), DateTime(2026, 9, 1)), 1);
     });
   });
 
@@ -265,14 +273,16 @@ void main() {
       expect(find.text('OUTSIDE.'), findsOneWidget);
       expect(find.text('Step Outside Your Echo Chamber'), findsOneWidget);
       expect(find.text('Continue'), findsOneWidget);
-      final firstImg = tester.widget<Image>(find.byType(Image).first);
+      final headerLogo = tester.widget<Image>(find.byType(Image).first);
+      expect((headerLogo.image as AssetImage).assetName, 'images/OUTSIDE.png');
+      final firstImg = tester.widget<Image>(find.byType(Image).last);
       expect((firstImg.image as AssetImage).assetName, 'images/outside3.jpg');
 
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
       expect(find.text('See Every Idea From Every Angle'), findsOneWidget);
-      final secondImg = tester.widget<Image>(find.byType(Image).first);
+      final secondImg = tester.widget<Image>(find.byType(Image).last);
       expect((secondImg.image as AssetImage).assetName, 'images/outside2.jpg');
 
       await tester.tap(find.text('Continue'));
@@ -280,7 +290,7 @@ void main() {
 
       expect(find.text('Reflect, Journal & Grow'), findsOneWidget);
       expect(find.text('Get Started'), findsOneWidget);
-      final thirdImg = tester.widget<Image>(find.byType(Image).first);
+      final thirdImg = tester.widget<Image>(find.byType(Image).last);
       expect((thirdImg.image as AssetImage).assetName, 'images/outside6.jpg');
 
       await tester.tap(find.text('Get Started'));
@@ -380,6 +390,38 @@ void main() {
 
       expect(confirmed, isTrue);
       expect(find.text('Delete Your Account?'), findsNothing);
+    });
+  });
+
+  group('Splash Screen Tests', () {
+    testWidgets('renders animated splash screen and displays logo and title', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SplashScreen(),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('OUTSIDE'), findsOneWidget);
+      expect(find.text('Step outside your echo chamber.'), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
+    });
+
+    testWidgets('triggers onFinish callback after animation duration', (tester) async {
+      bool finished = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SplashScreen(
+            onFinish: () => finished = true,
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 700));
+      expect(finished, isFalse);
+
+      await tester.pump(const Duration(milliseconds: 900));
+      expect(finished, isTrue);
     });
   });
 }

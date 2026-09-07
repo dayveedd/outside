@@ -39,47 +39,55 @@ class UserStreak {
     };
   }
 
+  static int daysBetween(DateTime from, DateTime to) {
+    final fromUtc = DateTime.utc(from.year, from.month, from.day);
+    final toUtc = DateTime.utc(to.year, to.month, to.day);
+    return toUtc.difference(fromUtc).inDays;
+  }
+
   static UserStreak calculateNextStreak({
     required int currentStreak,
     required int longestStreak,
     required DateTime? lastCompletedDate,
     required DateTime now,
   }) {
-    final todayDate = DateTime(now.year, now.month, now.day);
-    int newCurrentStreak = currentStreak;
-    int newLongestStreak = longestStreak;
-
     if (lastCompletedDate == null) {
-      newCurrentStreak = 1;
-      newLongestStreak = newCurrentStreak > longestStreak ? newCurrentStreak : longestStreak;
-    } else {
-      final lastCompleted = DateTime(
-        lastCompletedDate.year,
-        lastCompletedDate.month,
-        lastCompletedDate.day,
+      final newStreak = 1;
+      final newLongest = newStreak > longestStreak ? newStreak : longestStreak;
+      return UserStreak(
+        currentStreak: newStreak,
+        longestStreak: newLongest,
+        lastCompletedDate: now,
       );
-      final difference = todayDate.difference(lastCompleted).inDays;
-
-      if (difference == 0) {
-        return UserStreak(
-          currentStreak: currentStreak,
-          longestStreak: longestStreak,
-          lastCompletedDate: lastCompletedDate,
-        );
-      } else if (difference == 1) {
-        newCurrentStreak = currentStreak + 1;
-        newLongestStreak = newCurrentStreak > longestStreak ? newCurrentStreak : longestStreak;
-      } else {
-        newCurrentStreak = 1;
-        newLongestStreak = newCurrentStreak > longestStreak ? newCurrentStreak : longestStreak;
-      }
     }
 
-    return UserStreak(
-      currentStreak: newCurrentStreak,
-      longestStreak: newLongestStreak,
-      lastCompletedDate: now,
-    );
+    final diff = daysBetween(lastCompletedDate, now);
+
+    if (diff <= 0) {
+      final safeCurrent = currentStreak > 0 ? currentStreak : 1;
+      final safeLongest = safeCurrent > longestStreak ? safeCurrent : longestStreak;
+      return UserStreak(
+        currentStreak: safeCurrent,
+        longestStreak: safeLongest,
+        lastCompletedDate: lastCompletedDate,
+      );
+    } else if (diff == 1) {
+      final newStreak = currentStreak + 1;
+      final newLongest = newStreak > longestStreak ? newStreak : longestStreak;
+      return UserStreak(
+        currentStreak: newStreak,
+        longestStreak: newLongest,
+        lastCompletedDate: now,
+      );
+    } else {
+      final newStreak = 1;
+      final newLongest = newStreak > longestStreak ? newStreak : longestStreak;
+      return UserStreak(
+        currentStreak: newStreak,
+        longestStreak: newLongest,
+        lastCompletedDate: now,
+      );
+    }
   }
 
   UserStreak copyWith({
