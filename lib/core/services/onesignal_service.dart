@@ -87,6 +87,13 @@ class OneSignalService {
     OneSignal.logout();
   }
 
+  void syncStreakTags({required int streakCount, required bool completedToday}) {
+    OneSignal.User.addTags({
+      'streak': streakCount.toString(),
+      'completed_today': completedToday.toString(),
+    });
+  }
+
   void dispose() {
     _deepLinkController.close();
     _subscriptionIdController.close();

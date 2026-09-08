@@ -273,44 +273,63 @@ exports.broadcastMorningLesson = onSchedule("0 8 * * *", async () => {
   }
 });
 
-exports.sendEveningReminders = onSchedule("0 20 * * *", async () => {
-  try {
-    const startOfToday = new Date();
-    startOfToday.setUTCHours(0, 0, 0, 0);
+const sendStreakRemindersInternal = async () => {
+  const startOfToday = new Date();
+  startOfToday.setUTCHours(0, 0, 0, 0);
+  const todayStr = getUtcDateString();
 
-    const db = admin.firestore();
-    const usersSnapshot = await db.collection("users").get();
-    const uids = [];
+  const db = admin.firestore();
+  const usersSnapshot = await db.collection("users").get();
 
-    usersSnapshot.forEach((doc) => {
-      const data = doc.data();
-      const lastCompleted = data.lastCompletedDate;
-      if (!lastCompleted) {
-        uids.push(doc.id);
-      } else {
-        const lastCompletedDate = lastCompleted.toDate();
-        if (lastCompletedDate < startOfToday) {
-          uids.push(doc.id);
-        }
+  const streakHolders = [];
+  const nonStreakUsers = [];
+
+  usersSnapshot.forEach((doc) => {
+    const data = doc.data();
+    const lastCompleted = data.lastCompletedDate;
+    let completedToday = false;
+
+    if (lastCompleted) {
+      const lastCompletedDate = lastCompleted.toDate();
+      if (lastCompletedDate >= startOfToday) {
+        completedToday = true;
       }
-    });
-
-    if (uids.length === 0) {
-      return;
     }
 
-    const restApiKey = process.env.ONESIGNAL_REST_API_KEY;
-    const CHUNK_SIZE = 2000;
+    if (!completedToday) {
+      const currentStreak = Number(data.currentStreak) || 0;
+      if (currentStreak >= 1) {
+        streakHolders.push({ uid: doc.id, streak: currentStreak });
+      } else {
+        nonStreakUsers.push(doc.id);
+      }
+    }
+  });
 
+  const restApiKey = process.env.ONESIGNAL_REST_API_KEY;
+  if (!restApiKey) {
+    throw new Error("ONESIGNAL_REST_API_KEY is not configured in environment.");
+  }
+
+  const appId = "b1ad390f-d626-4ca3-939a-6b5e144c1dcb";
+  const CHUNK_SIZE = 2000;
+
+  if (streakHolders.length > 0) {
+    const uids = streakHolders.map((u) => u.uid);
     for (let i = 0; i < uids.length; i += CHUNK_SIZE) {
       const chunk = uids.slice(i, i + CHUNK_SIZE);
       await axios.post(
         "https://onesignal.com/api/v1/notifications",
         {
-          app_id: "b1ad390f-d626-4ca3-939a-6b5e144c1dcb",
+          app_id: appId,
+          target_channel: "push",
           include_aliases: { external_id: chunk },
-          include_external_user_ids: chunk,
-          contents: { en: "Your streak is at risk. Step outside your bubble before tomorrow." }
+          headings: { en: "Don't lose your streak! 🔥" },
+          contents: { en: "The day is running out. Complete today's 3-minute session to keep your streak alive." },
+          data: {
+            type: "streak_reminder",
+            lessonId: todayStr
+          }
         },
         {
           headers: {
@@ -320,8 +339,61 @@ exports.sendEveningReminders = onSchedule("0 20 * * *", async () => {
         }
       );
     }
+  }
+
+  if (nonStreakUsers.length > 0) {
+    for (let i = 0; i < nonStreakUsers.length; i += CHUNK_SIZE) {
+      const chunk = nonStreakUsers.slice(i, i + CHUNK_SIZE);
+      await axios.post(
+        "https://onesignal.com/api/v1/notifications",
+        {
+          app_id: appId,
+          target_channel: "push",
+          include_aliases: { external_id: chunk },
+          headings: { en: "Step outside before the day ends ⏳" },
+          contents: { en: "Today's lesson is waiting for you. Take 3 minutes to learn something new and build your streak." },
+          data: {
+            type: "streak_reminder",
+            lessonId: todayStr
+          }
+        },
+        {
+          headers: {
+            "Authorization": `Key ${restApiKey}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+    }
+  }
+
+  return {
+    streakHoldersNotified: streakHolders.length,
+    nonStreakUsersNotified: nonStreakUsers.length
+  };
+};
+
+exports.sendEveningReminders = onSchedule("0 20 * * *", async () => {
+  try {
+    const result = await sendStreakRemindersInternal();
+    console.log(`Evening streak reminders sent: ${result.streakHoldersNotified} streak holders, ${result.nonStreakUsersNotified} other users.`);
   } catch (error) {
     console.error("Error in sendEveningReminders:", error.response?.data || error.message);
     throw error;
   }
 });
+
+exports.manualSendEveningReminders = onRequest({ cors: true }, async (req, res) => {
+  try {
+    const result = await sendStreakRemindersInternal();
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    console.error("Error in manualSendEveningReminders:", error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: error.response?.data || null
+    });
+  }
+});
+
