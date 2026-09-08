@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:outside/data/models/lesson.dart';
 import 'package:outside/data/models/user_activity.dart';
 import 'package:outside/data/models/user_streak.dart';
+import 'package:outside/data/repositories/lesson_repository.dart';
 import 'package:outside/logic/lesson/lesson_event.dart';
 import 'package:outside/logic/lesson/lesson_state.dart';
 import 'package:outside/logic/subscription/subscription_state.dart';
@@ -424,5 +425,121 @@ void main() {
       expect(finished, isTrue);
     });
   });
+
+  group('Archive User Timeline Filtering Tests', () {
+    final now = DateTime(2026, 9, 8, 10, 0);
+
+    final lessonPastOld = Lesson(
+      id: 'lesson_old',
+      publishDate: '2026-09-01',
+      category: 'Science',
+      hook: 'Old Hook',
+      idea: 'Old Idea',
+      whyItMatters: 'Old Why',
+      everydayExample: 'Old Ex',
+      reflectionPrompt: 'Old Prompt',
+    );
+
+    final lessonYesterday = Lesson(
+      id: 'lesson_yesterday',
+      publishDate: '2026-09-07',
+      category: 'Psychology',
+      hook: 'Yesterday Hook',
+      idea: 'Yesterday Idea',
+      whyItMatters: 'Yesterday Why',
+      everydayExample: 'Yesterday Ex',
+      reflectionPrompt: 'Yesterday Prompt',
+    );
+
+    final lessonToday = Lesson(
+      id: 'lesson_today',
+      publishDate: '2026-09-08',
+      category: 'Art',
+      hook: 'Today Hook',
+      idea: 'Today Idea',
+      whyItMatters: 'Today Why',
+      everydayExample: 'Today Ex',
+      reflectionPrompt: 'Today Prompt',
+    );
+
+    final lessonFuture = Lesson(
+      id: 'lesson_future',
+      publishDate: '2026-09-09',
+      category: 'Tech',
+      hook: 'Future Hook',
+      idea: 'Future Idea',
+      whyItMatters: 'Future Why',
+      everydayExample: 'Future Ex',
+      reflectionPrompt: 'Future Prompt',
+    );
+
+    final allLessons = [lessonPastOld, lessonYesterday, lessonToday, lessonFuture];
+
+    test('Fresh user created today only receives editions from today onward', () {
+      final userCreatedAt = DateTime(2026, 9, 8, 8, 30);
+      final filtered = LessonRepository.filterArchiveForUser(
+        allLessons,
+        userCreatedAt: userCreatedAt,
+        now: now,
+      );
+
+      expect(filtered.length, 1);
+      expect(filtered.first.id, 'lesson_today');
+    });
+
+    test('User created yesterday receives yesterday and today editions but not older', () {
+      final userCreatedAt = DateTime(2026, 9, 7, 14, 0);
+      final filtered = LessonRepository.filterArchiveForUser(
+        allLessons,
+        userCreatedAt: userCreatedAt,
+        now: now,
+      );
+
+      expect(filtered.length, 2);
+      expect(filtered[0].id, 'lesson_today');
+      expect(filtered[1].id, 'lesson_yesterday');
+    });
+
+    test('User created on 2026-09-01 receives all published editions up to today', () {
+      final userCreatedAt = DateTime(2026, 9, 1, 9, 0);
+      final filtered = LessonRepository.filterArchiveForUser(
+        allLessons,
+        userCreatedAt: userCreatedAt,
+        now: now,
+      );
+
+      expect(filtered.length, 3);
+      expect(filtered.any((l) => l.id == 'lesson_future'), isFalse);
+    });
+
+    test('Clock skew clamping ensures fresh user always sees today edition', () {
+      final futureUserCreatedAt = DateTime(2026, 9, 9, 2, 0);
+      final filtered = LessonRepository.filterArchiveForUser(
+        allLessons,
+        userCreatedAt: futureUserCreatedAt,
+        now: now,
+      );
+
+      expect(filtered.length, 1);
+      expect(filtered.first.id, 'lesson_today');
+    });
+  });
+
+  group('LessonRepository Cache & User Isolation Tests', () {
+    test('User activity and cache clearing are isolated per user', () {
+      final repo = LessonRepository();
+
+      expect(repo.hasCachedArchive('user_fresh'), isFalse);
+      expect(repo.hasCachedSaved('user_fresh'), isFalse);
+      expect(repo.getCachedUserActivity('lesson_1', userId: 'user_fresh'), isNull);
+
+      repo.clearCache(userId: 'user_fresh');
+      expect(repo.hasCachedArchive('user_fresh'), isFalse);
+
+      repo.clearCache();
+      expect(repo.hasCachedArchive('user_fresh'), isFalse);
+    });
+  });
 }
+
 

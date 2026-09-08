@@ -77,6 +77,7 @@ class MyApp extends StatelessWidget {
           BlocProvider<AuthBloc>(
             create: (context) => AuthBloc(
               authRepository: authRepository,
+              lessonRepository: lessonRepository,
             )..add(AuthCheckRequested()),
           ),
           BlocProvider<StreakBloc>(

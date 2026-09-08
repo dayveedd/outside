@@ -1,16 +1,21 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/lesson_repository.dart';
 import '../../core/services/onesignal_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
+  final LessonRepository? _lessonRepository;
   StreamSubscription? _authSubscription;
 
-  AuthBloc({required AuthRepository authRepository})
-      : _authRepository = authRepository,
+  AuthBloc({
+    required AuthRepository authRepository,
+    LessonRepository? lessonRepository,
+  })  : _authRepository = authRepository,
+        _lessonRepository = lessonRepository,
         super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInWithEmailRequested>(_onSignInWithEmailRequested);
@@ -117,6 +122,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       await _authRepository.signOut();
+      _lessonRepository?.clearCache();
       OneSignalService().logout();
       emit(Unauthenticated());
     } catch (e) {
@@ -131,6 +137,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       await _authRepository.deleteAccount();
+      _lessonRepository?.clearCache();
       OneSignalService().logout();
       emit(Unauthenticated());
     } catch (e) {

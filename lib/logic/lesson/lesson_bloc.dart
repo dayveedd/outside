@@ -44,7 +44,7 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
       for (final p in pool) {
         await _lessonRepository.getUserActivity(event.userId, p.id);
       }
-      final activity = _lessonRepository.getCachedUserActivity(lesson.id);
+      final activity = _lessonRepository.getCachedUserActivity(lesson.id, userId: event.userId);
       emit(DailyLessonLoaded(
         lesson: lesson,
         activity: activity,
@@ -76,11 +76,11 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
     LoadArchive event,
     Emitter<LessonState> emit,
   ) async {
-    if (!_lessonRepository.hasCachedArchive && state is! ArchiveLoaded) {
+    if (!_lessonRepository.hasCachedArchive(event.userId) && state is! ArchiveLoaded) {
       emit(LessonLoading());
     }
     try {
-      final lessons = await _lessonRepository.getArchive();
+      final lessons = await _lessonRepository.getArchive(userId: event.userId);
       final activities = await _lessonRepository.getUserActivities(event.userId);
       emit(ArchiveLoaded(lessons: lessons, activities: activities));
     } catch (e) {
@@ -94,7 +94,7 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
     LoadSavedLessons event,
     Emitter<LessonState> emit,
   ) async {
-    if (!_lessonRepository.hasCachedSaved && state is! SavedLessonsLoaded) {
+    if (!_lessonRepository.hasCachedSaved(event.userId) && state is! SavedLessonsLoaded) {
       emit(LessonLoading());
     }
     try {
@@ -166,7 +166,7 @@ class LessonBloc extends Bloc<LessonEvent, LessonState> {
         updatedActivities[event.lessonId] = updatedActivity;
         emit(ArchiveLoaded(lessons: currentState.lessons, activities: updatedActivities));
       } else if (currentState is SavedLessonsLoaded) {
-        final lessons = await _lessonRepository.getSavedLessons(event.userId);
+        final lessons = await _lessonRepository.getSavedLessons(event.userId, forceRefresh: true);
         emit(SavedLessonsLoaded(lessons));
       }
     } catch (e) {

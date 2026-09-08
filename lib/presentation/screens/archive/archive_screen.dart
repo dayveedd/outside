@@ -94,9 +94,13 @@ class ArchiveScreenState extends State<ArchiveScreen> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
-        if (authState is Authenticated && _userId == null) {
-          _userId = authState.user.uid;
-          context.read<LessonBloc>().add(LoadArchive(_userId!));
+        if (authState is Authenticated) {
+          if (_userId != authState.user.uid) {
+            _userId = authState.user.uid;
+            context.read<LessonBloc>().add(LoadArchive(_userId!));
+          }
+        } else if (authState is Unauthenticated) {
+          _userId = null;
         }
       },
       child: Scaffold(
